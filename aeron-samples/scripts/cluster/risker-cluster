@@ -34,9 +34,9 @@ function startNode() {
         -Daeron.event.cluster.log=all \
         -Daeron.event.cluster.log.disable=CANVASS_POSITION,APPEND_POSITION,COMMIT_POSITION \
         -Daeron.cluster.tutorial.nodeId=${1} \
-	-Daeron.cluster.tutorial.hostnames="170.187.197.210,170.187.197.210,170.187.197.210" \
+	-Daeron.cluster.tutorial.hostnames="139.162.38.129,139.162.38.129,139.162.38.129" \
         ${JVM_OPTS} ${ADD_OPENS} \
-        io.aeron.samples.cluster.tutorial.BasicAuctionClusteredServiceNode > logs/cluster-${1}.log &
+        io.aeron.samples.cluster.tutorial.BasicAuctionClusteredServiceNode > logs/risker-cluster-${1}.log &
 }
 
 function startAll() {
@@ -44,7 +44,7 @@ function startAll() {
   startNode 1
   startNode 2
 
-  tail -n 100 -F logs/cluster-*.log
+  tail -n 100 -F logs/risker-cluster-*.log
 }
 # end::start_jvm[]
 
@@ -54,7 +54,7 @@ elif [[ ${1} == 0 ]] || [[ ${1} == 1 ]] || [[ ${1} == 2 ]]; then
   echo "starting node ${1}"
   startNode ${1}
 else
-  echo "Usage: ./basic-auction-cluster [0,1,2]"
+  echo "Usage: ./risker-cluster [0,1,2]"
   exit 1
 fi
 

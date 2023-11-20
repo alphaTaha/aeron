@@ -14,16 +14,11 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-
 source ./script-common
-
-mkdir -p logs
-
 # tag::start_jvm[]
 function startNode() {
     ${JAVA_HOME}/bin/java \
         -cp ../../../aeron-all/build/libs/aeron-all-${VERSION}.jar \
-        -javaagent:../../../aeron-agent/build/libs/aeron-agent-${VERSION}.jar \
         -XX:+UseBiasedLocking \
         -XX:BiasedLockingStartupDelay=0 \
         -XX:+UnlockExperimentalVMOptions \
@@ -31,31 +26,23 @@ function startNode() {
         -XX:+UnlockDiagnosticVMOptions \
         -XX:GuaranteedSafepointInterval=300000 \
         -XX:+UseParallelGC \
-        -Daeron.event.cluster.log=all \
-        -Daeron.event.cluster.log.disable=CANVASS_POSITION,APPEND_POSITION,COMMIT_POSITION \
-        -Daeron.cluster.tutorial.nodeId=${1} \
-	-Daeron.cluster.tutorial.hostnames="170.187.197.210,170.187.197.210,170.187.197.210" \
+        -Daeron.cluster.tutorial.customerId="${1}" \
+        -Daeron.cluster.tutorial.HighEven="${2}" \
+        -Daeron.cluster.tutorial.HighOdd="${3}" \
+	-Daeron.cluster.tutorial.NumLoops="${4}" \
+      	-Daeron.cluster.tutorial.hostnames="3.66.225.195,3.66.225.195,3.66.225.195" \
+	-Daeron.cluster.tutorial.egressURI="aeron:udp?endpoint=139.162.38.129:0" \
         ${JVM_OPTS} ${ADD_OPENS} \
-        io.aeron.samples.cluster.tutorial.BasicAuctionClusteredServiceNode > logs/cluster-${1}.log &
+        io.aeron.samples.cluster.tutorial.BasicAuctionClusterClient
 }
-
-function startAll() {
-  startNode 0
-  startNode 1
-  startNode 2
-
-  tail -n 100 -F logs/cluster-*.log
-}
-# end::start_jvm[]
-
 if [[ $# -lt 1 ]]; then
-  startAll
-elif [[ ${1} == 0 ]] || [[ ${1} == 1 ]] || [[ ${1} == 2 ]]; then
-  echo "starting node ${1}"
-  startNode ${1}
-else
-  echo "Usage: ./basic-auction-cluster [0,1,2]"
+  echo "Usage: ./matcher-client <customer id> <high even> <high odd> <num loops>"
   exit 1
 fi
-
+# CUSTOMER_ID=${1}
+# NUM_OF_BIDS=${2:-10}
+# BID_INTERVAL_MS=${3:-1000}
+# startNode ${CUSTOMER_ID} ${NUM_OF_BIDS} ${BID_INTERVAL_MS}
+  startNode ${1} ${2} ${3} ${4}
+# end::start_jvm[]
 

@@ -12,7 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
+
 package io.aeron.samples.cluster.tutorial;
 
 import io.aeron.ChannelUriStringBuilder;
@@ -43,14 +44,12 @@ import static java.lang.Integer.parseInt;
 public class BasicAuctionClusteredServiceNode
 // end::new_service[]
 {
-    private static ErrorHandler errorHandler(final String context)
-    {
-        return
-            (Throwable throwable) ->
-            {
-                System.err.println(context);
-                throwable.printStackTrace(System.err);
-            };
+    
+    private static ErrorHandler errorHandler(final String context) {
+        return (Throwable throwable) -> {
+            System.err.println(context);
+            throwable.printStackTrace(System.err);
+        };
     }
 
     // tag::ports[]
@@ -64,55 +63,49 @@ public class BasicAuctionClusteredServiceNode
     private static final int LOG_CONTROL_PORT_OFFSET = 6;
     private static final int TERM_LENGTH = 64 * 1024;
 
-    static int calculatePort(final int nodeId, final int offset)
-    {
+    static int calculatePort(final int nodeId, final int offset) {
         return PORT_BASE + (nodeId * PORTS_PER_NODE) + offset;
     }
     // end::ports[]
 
     // tag::udp_channel[]
-    private static String udpChannel(final int nodeId, final String hostname, final int portOffset)
-    {
+    private static String udpChannel(final int nodeId, final String hostname, final int portOffset) {
         final int port = calculatePort(nodeId, portOffset);
         return new ChannelUriStringBuilder()
-            .media("udp")
-            .termLength(TERM_LENGTH)
-            .endpoint(hostname + ":" + port)
-            .build();
+                .media("udp")
+                .termLength(TERM_LENGTH)
+                .endpoint(hostname + ":" + port)
+                .build();
     }
     // end::udp_channel[]
 
-    private static String logControlChannel(final int nodeId, final String hostname, final int portOffset)
-    {
+    private static String logControlChannel(final int nodeId, final String hostname, final int portOffset) {
         final int port = calculatePort(nodeId, portOffset);
         return new ChannelUriStringBuilder()
-            .media("udp")
-            .termLength(TERM_LENGTH)
-            .controlMode(CommonContext.MDC_CONTROL_MODE_MANUAL)
-            .controlEndpoint(hostname + ":" + port)
-            .build();
+                .media("udp")
+                .termLength(TERM_LENGTH)
+                .controlMode(CommonContext.MDC_CONTROL_MODE_MANUAL)
+                .controlEndpoint(hostname + ":" + port)
+                .build();
     }
 
-    private static String logReplicationChannel(final String hostname)
-    {
+    private static String logReplicationChannel(final String hostname) {
         return new ChannelUriStringBuilder()
-            .media("udp")
-            .endpoint(hostname + ":0")
-            .build();
+                .media("udp")
+                .endpoint(hostname + ":0")
+                .build();
     }
 
-    private static String clusterMembers(final List<String> hostnames)
-    {
+    private static String clusterMembers(final List<String> hostnames) {
         final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < hostnames.size(); i++)
-        {
+        for (int i = 0; i < hostnames.size(); i++) {
             sb.append(i);
             sb.append(',').append(hostnames.get(i)).append(':').append(calculatePort(i, CLIENT_FACING_PORT_OFFSET));
             sb.append(',').append(hostnames.get(i)).append(':').append(calculatePort(i, MEMBER_FACING_PORT_OFFSET));
             sb.append(',').append(hostnames.get(i)).append(':').append(calculatePort(i, LOG_PORT_OFFSET));
             sb.append(',').append(hostnames.get(i)).append(':').append(calculatePort(i, TRANSFER_PORT_OFFSET));
             sb.append(',').append(hostnames.get(i)).append(':')
-                .append(calculatePort(i, ARCHIVE_CONTROL_PORT_OFFSET));
+                    .append(calculatePort(i, ARCHIVE_CONTROL_PORT_OFFSET));
             sb.append('|');
         }
 
@@ -126,83 +119,93 @@ public class BasicAuctionClusteredServiceNode
      */
     @SuppressWarnings("try")
     // tag::main[]
-    public static void main(final String[] args)
-    {
-        final int nodeId = parseInt(System.getProperty("aeron.cluster.tutorial.nodeId"));               // <1>
+    public static void main(final String[] args) {
+        final int nodeId = parseInt(System.getProperty("aeron.cluster.tutorial.nodeId")); // <1>
         final String[] hostnames = System.getProperty(
-            "aeron.cluster.tutorial.hostnames", "localhost,localhost,localhost").split(",");            // <2>
+                "aeron.cluster.tutorial.hostnames", "localhost,localhost,localhost").split(","); // <2>
         final String hostname = hostnames[nodeId];
 
-        final File baseDir = new File(System.getProperty("user.dir"), "node" + nodeId);                 // <3>
+        final String hedgerIngressURI = System.getProperty(
+                        "aeron.cluster.tutorial.hedgerURI"); // <2>
+
+        final String riskerIngressURI = System.getProperty(
+                                "aeron.cluster.tutorial.riskerURI"); // <2>
+
+        System.out.println("hedgerIngressURI is ===>" + hedgerIngressURI);
+        System.out.println("riskerIngressURI is ===>" + riskerIngressURI);
+
+
+
+
+        final File baseDir = new File(System.getProperty("user.dir"), "node" + nodeId); // <3>
         final String aeronDirName = CommonContext.getAeronDirectoryName() + "-" + nodeId + "-driver";
 
-        final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier();                              // <4>
+        final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier(); // <4>
         // end::main[]
 
         // tag::media_driver[]
         final MediaDriver.Context mediaDriverContext = new MediaDriver.Context()
-            .aeronDirectoryName(aeronDirName)
-            .threadingMode(ThreadingMode.SHARED)
-            .termBufferSparseFile(true)
-            .multicastFlowControlSupplier(new MinMulticastFlowControlSupplier())
-            .terminationHook(barrier::signal)
-            .errorHandler(BasicAuctionClusteredServiceNode.errorHandler("Media Driver"));
+                .aeronDirectoryName(aeronDirName)
+                .threadingMode(ThreadingMode.SHARED)
+                .termBufferSparseFile(true)
+                .multicastFlowControlSupplier(new MinMulticastFlowControlSupplier())
+                .terminationHook(barrier::signal)
+                .errorHandler(BasicAuctionClusteredServiceNode.errorHandler("Media Driver"));
         // end::media_driver[]
 
         final AeronArchive.Context replicationArchiveContext = new AeronArchive.Context()
-            .controlResponseChannel("aeron:udp?endpoint=" + hostname + ":0");
+                .controlResponseChannel("aeron:udp?endpoint=" + hostname + ":0");
 
         // tag::archive[]
         final Archive.Context archiveContext = new Archive.Context()
-            .aeronDirectoryName(aeronDirName)
-            .archiveDir(new File(baseDir, "archive"))
-            .controlChannel(udpChannel(nodeId, hostname, ARCHIVE_CONTROL_PORT_OFFSET))
-            .archiveClientContext(replicationArchiveContext)
-            .localControlChannel("aeron:ipc?term-length=64k")
-            .recordingEventsEnabled(false)
-            .threadingMode(ArchiveThreadingMode.SHARED)
-            .replicationChannel("aeron:udp?endpoint=" + hostname + ":0");
+                .aeronDirectoryName(aeronDirName)
+                .archiveDir(new File(baseDir, "archive"))
+                .controlChannel(udpChannel(nodeId, hostname, ARCHIVE_CONTROL_PORT_OFFSET))
+                .archiveClientContext(replicationArchiveContext)
+                .localControlChannel("aeron:ipc?term-length=64k")
+                .recordingEventsEnabled(false)
+                .threadingMode(ArchiveThreadingMode.SHARED)
+                .replicationChannel("aeron:udp?endpoint=" + hostname + ":0");
         // end::archive[]
 
         // tag::archive_client[]
         final AeronArchive.Context aeronArchiveContext = new AeronArchive.Context()
-            .lock(NoOpLock.INSTANCE)
-            .controlRequestChannel(archiveContext.localControlChannel())
-            .controlResponseChannel(archiveContext.localControlChannel())
-            .aeronDirectoryName(aeronDirName);
+                .lock(NoOpLock.INSTANCE)
+                .controlRequestChannel(archiveContext.localControlChannel())
+                .controlResponseChannel(archiveContext.localControlChannel())
+                .aeronDirectoryName(aeronDirName);
         // end::archive_client[]
 
         // tag::consensus_module[]
         final ConsensusModule.Context consensusModuleContext = new ConsensusModule.Context()
-            .errorHandler(errorHandler("Consensus Module"))
-            .clusterMemberId(nodeId)                                                                     // <1>
-            .clusterMembers(clusterMembers(Arrays.asList(hostnames)))                                    // <2>
-            .clusterDir(new File(baseDir, "cluster"))                                                   // <3>
-            .ingressChannel("aeron:udp?term-length=64k")                                                 // <4>
-            .logChannel(logControlChannel(nodeId, hostname, LOG_CONTROL_PORT_OFFSET))                    // <5>
-            .replicationChannel(logReplicationChannel(hostname))                                         // <6>
-            .archiveContext(aeronArchiveContext.clone());                                                // <7>
+                .errorHandler(errorHandler("Consensus Module"))
+                .clusterMemberId(nodeId) // <1>
+                .clusterMembers(clusterMembers(Arrays.asList(hostnames))) // <2>
+                .clusterDir(new File(baseDir, "cluster")) // <3>
+                .ingressChannel("aeron:udp?term-length=64k") // <4>
+                .logChannel(logControlChannel(nodeId, hostname, LOG_CONTROL_PORT_OFFSET)) // <5>
+                .replicationChannel(logReplicationChannel(hostname)) // <6>
+                .archiveContext(aeronArchiveContext.clone()); // <7>
         // end::consensus_module[]
 
         // tag::clustered_service[]
-        final ClusteredServiceContainer.Context clusteredServiceContext =
-            new ClusteredServiceContainer.Context()
-            .aeronDirectoryName(aeronDirName)                                                            // <1>
-            .archiveContext(aeronArchiveContext.clone())                                                 // <2>
-            .clusterDir(new File(baseDir, "cluster"))
-            .clusteredService(new BasicAuctionClusteredService())                                        // <3>
-            .errorHandler(errorHandler("Clustered Service"));
+        final ClusteredServiceContainer.Context clusteredServiceContext = new ClusteredServiceContainer.Context()
+                .aeronDirectoryName(aeronDirName) // <1>
+                .archiveContext(aeronArchiveContext.clone()) // <2>
+                .clusterDir(new File(baseDir, "cluster"))
+                .clusteredService(new BasicAuctionClusteredService()) // <3>
+                .errorHandler(errorHandler("Clustered Service"));
         // end::clustered_service[]
 
         // tag::running[]
         try (
-            ClusteredMediaDriver clusteredMediaDriver = ClusteredMediaDriver.launch(
-                mediaDriverContext, archiveContext, consensusModuleContext);                             // <1>
-            ClusteredServiceContainer container = ClusteredServiceContainer.launch(
-                clusteredServiceContext))                                                                // <2>
+                ClusteredMediaDriver clusteredMediaDriver = ClusteredMediaDriver.launch(
+                        mediaDriverContext, archiveContext, consensusModuleContext); // <1>
+                ClusteredServiceContainer container = ClusteredServiceContainer.launch(
+                        clusteredServiceContext)) // <2>
         {
             System.out.println("[" + nodeId + "] Started Cluster Node on " + hostname + "...");
-            barrier.await();                                                                             // <3>
+            barrier.await(); // <3>
             System.out.println("[" + nodeId + "] Exiting");
         }
         // end::running[]

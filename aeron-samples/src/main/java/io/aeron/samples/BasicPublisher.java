@@ -21,6 +21,7 @@ import io.aeron.driver.MediaDriver;
 import org.agrona.BufferUtil;
 import org.agrona.CloseHelper;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.*;
 
 import java.util.concurrent.TimeUnit;
 
@@ -70,14 +71,36 @@ public class BasicPublisher
         try (Aeron aeron = Aeron.connect(ctx);
             Publication publication = aeron.addPublication(CHANNEL, STREAM_ID))
         {
-            final UnsafeBuffer buffer = new UnsafeBuffer(BufferUtil.allocateDirectAligned(256, 64));
+           // final UnsafeBuffer buffer = new UnsafeBuffer(BufferUtil.allocateDirectAligned(256, 64));
+            final MutableDirectBuffer buffer = new ExpandableArrayBuffer();
 
-            for (long i = 0; i < NUMBER_OF_MESSAGES; i++)
+
+            for (long i = 0; i < 5; i++)
             {
-                System.out.print("Offering " + i + "/" + NUMBER_OF_MESSAGES + " - ");
+                System.out.print("Offering " + i + "/" + 5 + " - ");
 
-                final int length = buffer.putStringWithoutLengthAscii(0, "Hello World! " + i);
-                final long result = publication.offer(buffer, 0, length);
+
+                // TEST CODE BEGINS ---TAHA
+
+                int CORRELATION_ID_OFFSET = 0;
+                int CUSTOMER_ID_OFFSET = CORRELATION_ID_OFFSET + BitUtil.SIZE_OF_LONG;
+                int LARGE_EVEN_OFFSET = CUSTOMER_ID_OFFSET + BitUtil.SIZE_OF_LONG;
+                int LARGE_ODD_OFFSET = LARGE_EVEN_OFFSET + BitUtil.SIZE_OF_LONG;
+                int BID_MESSAGE_LENGTH = LARGE_ODD_OFFSET + BitUtil.SIZE_OF_LONG;
+                int BID_SUCCEEDED_OFFSET = BID_MESSAGE_LENGTH;
+                int EGRESS_MESSAGE_LENGTH = BID_SUCCEEDED_OFFSET + BitUtil.SIZE_OF_BYTE;
+                buffer.putLong(CORRELATION_ID_OFFSET, 10); // <1>
+                buffer.putLong(CUSTOMER_ID_OFFSET, 150);
+                buffer.putLong(LARGE_EVEN_OFFSET, 2);
+                buffer.putLong(LARGE_ODD_OFFSET, 5);
+
+
+
+                // TEST CODE ENDS ---- TAHA
+
+
+
+                final long result = publication.offer(buffer, 0, BID_MESSAGE_LENGTH);
 
                 if (result > 0)
                 {
@@ -116,7 +139,7 @@ public class BasicPublisher
                 }
 
                 Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-            }
+            }//end for
 
             System.out.println("Done sending.");
 
